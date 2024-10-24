@@ -1,0 +1,14 @@
+<?xml version='1.0' encoding='utf-8'?>
+<widget id="io.cordova.drivesafe" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
+    <name>DriveSafe</name>
+    <description>An app to help you minimize distractions on the road!</description>
+    <author email="srinivasananand8@gmail.com">
+        Anand Srinivasan
+    </author>
+
+    <content src="index.html" />
+    <allow-intent href="http://*/*" />
+    <allow-intent href="https://*/*" />
+    <allow-intent href="geo:*" />
+     <icon src="www/img/DriveSafe.png" platform="ios" width="57" height="57" density="mdpi" />
+</widget>

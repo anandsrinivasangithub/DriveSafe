@@ -5,25 +5,51 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DriveSafe</title>
     <link rel="stylesheet" href="css/index.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 </head>
 <body>
-    <div style="text-align: center; font-size: 24px;"></div>
+    <div class="app-container">
+        <div class="app-header">
+            <img src="img/logo.png" alt="DriveSafe Logo" class="logo">
+            <h1>DriveSafe</h1>
+        </div>
+        
+        <div class="speed-display">
+            <div class="speed-circle">
+                <span id="speedCounter">0</span>
+                <span class="speed-unit">mph</span>
+            </div>
+        </div>
+        
+        <div class="button-container">
+            <button id="startButton" class="primary-button">Start Drive</button>
+            <button id="stopButton" class="secondary-button" disabled>Stop</button>
+        </div>
+        
+        <div class="status-message">
+            <div class="status-indicator"></div>
+            <span>Ready to protect you from distractions</span>
+        </div>
+        
+        <div class="app-section">
+            <h2>Essential Apps</h2>
+            <div class="logo-container">
+                <div class="app-icon" onclick="openGoogleMaps()">
+                    <img src="img/google-maps.png" alt="Google Maps">
+                    <span>Maps</span>
+                </div>
+                <div class="app-icon spotify">
+                    <img src="img/spotify.png" alt="Spotify">
+                    <span>Spotify</span>
+                </div>
+                
+            </div>
+        </div>
     </div>
+    
     <script type="text/javascript" src="cordova.js"></script>
-    <h1>DriveSafe</h1>
-    <div class="button-container">
-        <button id="startButton">Start</button>
-        <button id="stopButton" disabled>Stop</button>
-    </div>
-    <br>
-    <span id="speedCounter">Speed: 0 mph</span>
-    <br><br>
-    <div class="logo-container">
-        <img src="img/google-maps.png" alt="Google Maps" onclick="openGoogleMaps()">
-        <img src="img/spotify.png" alt="Spotify" onclick="openSpotify()">
-    </div>
     <script>
-      let watchID;
+        let watchID;
         let lastTime = null;
         let setSpeed = 0;
         let lastAcceleration = null;
@@ -33,6 +59,8 @@
         const speedThreshold = 15; 
         const requiredBelowTime = 2 * 60 * 1000; 
         let abletostop = false;
+        const statusMessage = document.querySelector('.status-message span');
+        const statusIndicator = document.querySelector('.status-indicator');
 
         function startTracking() {
             if (navigator.geolocation) {
@@ -42,14 +70,17 @@
                     maximumAge: 0
                 });
             } else {
-                document.getElementById('speedCounter').innerHTML = "Geolocation not supported";
+                document.getElementById('speedCounter').innerHTML = "0";
+                statusMessage.textContent = "Geolocation not supported";
             }
         }
+        
         function onSuccess(position) {
             const speedMps = position.coords.speed; 
-            const speedMph = (speedMps * 2.23694).toFixed(2);
+            const speedMph = (speedMps * 2.23694).toFixed(0);
             setSpeed = speedMph;
-            document.getElementById('speedCounter').innerHTML = `Speed: ${speedMph} mph`;
+            document.getElementById('speedCounter').innerHTML = speedMph;
+            
             const currentTime = new Date().getTime();
             if (speedMps !== null && speedMph < speedThreshold) {
                 if (!speedBelowStartTime) {
@@ -60,99 +91,111 @@
 
                     if (speedBelowAccumulatedTime >= requiredBelowTime) {
                         abletostop = true;
+                        statusMessage.textContent = "You can now stop the lockdown";
+                        statusIndicator.classList.add('status-green');
+                    } else {
+                        const timeRemaining = Math.max((requiredBelowTime - speedBelowAccumulatedTime) / 1000, 0);
+                        statusMessage.textContent = `Waiting: ${timeRemaining.toFixed(0)} seconds below speed limit`;
                     }
                 }
             } else {
                 resetBelowSpeedTracking();
+                statusMessage.textContent = "Speed above threshold - lockdown active";
             }
         }
+        
         function resetBelowSpeedTracking() {
             speedBelowStartTime = null;
             speedBelowAccumulatedTime = 0;
+            statusIndicator.classList.remove('status-green');
         }
+        
         function onError(error) {
             alert(`Error Code: ${error.code} - ${error.message}`);
         }
-    function openGoogleMaps() {
-        cordova.InAppBrowser.open("https://www.google.com/maps")
+        
+        function openGoogleMaps() {
+            cordova.InAppBrowser.open("https://www.google.com/maps");
+        }
 
-    }
-
-    function openSpotify() {
-                cordova.InAppBrowser.open("https://open.spotify.com")
-  
-    }
-    
-
-startButton.addEventListener('click', function() {
-
-    navigator.notification.confirm(
-    'By confirming, this app will lock your phone until it has determined that you are not driving. Are you sure you want to proceed?', 
-     start,          
-    'Are you sure?',        
-    ['Yes','No']   
-);
-});
-stopButton.addEventListener('click', function() {
-    if (abletostop == true) {
-        navigator.notification.alert(
-        'Stopping Lockdown',  
-        alertDismissed,        
-        'Done',            
-        'Ok'                 
-    );
-        window.plugins.locktask.stopLockTask();
-        document.getElementById('startButton').disabled = false;
-    }
-    else {
-        const speedMph = (setSpeed * 2.23694).toFixed(2);
-        if (speedMph > speedThreshold) {
-            navigator.notification.alert(
-        `You cannot stop the lockdown yet. Your speed must be under ${speedThreshold} mph for at least 2 minutes. `,  
-        alertDismissed,        
-        'Error',            
-        'Ok'                 
-    );
-    }
-    else if (speedMph < speedThreshold) {
-        let timeRemaining = Math.max((requiredBelowTime - speedBelowAccumulatedTime) / 1000, 0)
-        navigator.notification.alert(
-        `You cannot stop the lockdown yet. You still need to wait ${timeRemaining.toFixed(1)} seconds.`,  
-        alertDismissed,        
-        'Error',            
-        'Ok'                 
-    );
-    }
-}
-});
-function alertDismissed() {
-    navigator.notification.dismissPrevious([successCallback], [errorCallback])
-}
-function start(s) {
-    if (s == 1) {
-        document.getElementById('stopButton').disabled = false;
-        navigator.notification.alert(
-        'Lockdown has started',  
-        alertDismissed,         
-        'Lockdown',            
-     'Ok'                 
-);
-        window.plugins.locktask.startLockTask();
-        document.getElementById('startButton').disabled = true;
-        startTracking();
-    }
-    else {
-        navigator.notification.alert(
-    'Lockdown cancelled',  
-    alertDismissed,        
-    'Lockdown',            
-    'Ok'                 
-);
-document.getElementById("speedCounter").innerHTML = "Speed: 0 mph";
-    }
-
-    
-} 
+        function openSpotify() {
+            cordova.InAppBrowser.open("https://open.spotify.com");
+        }
+        
+        document.getElementById('startButton').addEventListener('click', function() {
+            navigator.notification.confirm(
+                'By confirming, this app will lock your phone until it has determined that you are not driving. Are you sure you want to proceed?', 
+                start,          
+                'Are you sure?',        
+                ['Yes','No']   
+            );
+        });
+        
+        document.getElementById('stopButton').addEventListener('click', function() {
+            if (abletostop == true) {
+                navigator.notification.alert(
+                    'Stopping Lockdown',  
+                    alertDismissed,        
+                    'Done',            
+                    'Ok'                 
+                );
+                window.plugins.locktask.stopLockTask();
+                document.getElementById('startButton').disabled = false;
+                document.getElementById('stopButton').disabled = true;
+                statusMessage.textContent = "Ready to protect you from distractions";
+                statusIndicator.classList.remove('status-green');
+                document.getElementById('speedCounter').innerHTML = "0";
+            }
+            else {
+                const speedMph = setSpeed;
+                if (speedMph > speedThreshold) {
+                    navigator.notification.alert(
+                        `You cannot stop the lockdown yet. Your speed must be under ${speedThreshold} mph for at least 2 minutes.`,  
+                        alertDismissed,        
+                        'Error',            
+                        'Ok'                 
+                    );
+                }
+                else if (speedMph < speedThreshold) {
+                    let timeRemaining = Math.max((requiredBelowTime - speedBelowAccumulatedTime) / 1000, 0);
+                    navigator.notification.alert(
+                        `You cannot stop the lockdown yet. You still need to wait ${timeRemaining.toFixed(0)} seconds.`,  
+                        alertDismissed,        
+                        'Error',            
+                        'Ok'                 
+                    );
+                }
+            }
+        });
+        
+        function alertDismissed() {
+            navigator.notification.dismissPrevious([successCallback], [errorCallback]);
+        }
+        
+        function start(s) {
+            if (s == 1) {
+                document.getElementById('stopButton').disabled = false;
+                navigator.notification.alert(
+                    'Lockdown has started',  
+                    alertDismissed,         
+                    'Lockdown',            
+                    'Ok'                 
+                );
+                window.plugins.locktask.startLockTask();
+                document.getElementById('startButton').disabled = true;
+                statusMessage.textContent = "Lockdown active - monitoring speed";
+                startTracking();
+            }
+            else {
+                navigator.notification.alert(
+                    'Lockdown cancelled',  
+                    alertDismissed,        
+                    'Lockdown',            
+                    'Ok'                 
+                );
+                document.getElementById('speedCounter').innerHTML = "0";
+            }
+        }
     </script>
 </body>
 </html>
